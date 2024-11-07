@@ -54,12 +54,9 @@ public class Employee {
         if (unavailableDays == null) {
             return true;
         }
-        for (var date = fromDateInclusive; !date.isAfter(toDateInclusive); date = date.plusDays(1)) {
-            if (unavailableDays.contains(date)) {
-                return false;
-            }
-        }
-        return true;
+        return fromDateInclusive
+                .datesUntil(toDateInclusive.plusDays(1))
+                .noneMatch(unavailableDays::contains);
     }
 
     @Override
