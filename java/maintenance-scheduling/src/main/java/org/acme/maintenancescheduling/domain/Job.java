@@ -24,6 +24,8 @@ public class Job {
 
     private Set<String> tags;
 
+    private Equipment equipment;
+
     @PlanningVariable
     private Crew crew;
     // Follows the TimeGrain Design Pattern
@@ -118,5 +120,13 @@ public class Job {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public Equipment getEquipment() {
+        return equipment;
+    }
+
+    public void setEquipment(Equipment equipment) {
+        this.equipment = equipment;
     }
 }

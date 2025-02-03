@@ -3,12 +3,21 @@ package org.acme.maintenancescheduling.solver;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 import static ai.timefold.solver.core.api.score.stream.Joiners.equal;
 import static ai.timefold.solver.core.api.score.stream.Joiners.filtering;
 import static ai.timefold.solver.core.api.score.stream.Joiners.overlapping;
 
+import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
+import ai.timefold.solver.core.api.score.stream.ConstraintCollectors;
+import ai.timefold.solver.core.api.score.stream.Joiners;
+import ai.timefold.solver.core.api.score.stream.bi.BiConstraintStream;
+import ai.timefold.solver.core.api.score.stream.common.ConnectedRangeChain;
+import org.acme.maintenancescheduling.domain.Equipment;
 import org.acme.maintenancescheduling.domain.Job;
 import ai.timefold.solver.core.api.score.buildin.hardsoftlong.HardSoftLongScore;
 import ai.timefold.solver.core.api.score.stream.Constraint;
@@ -24,6 +33,7 @@ public class MaintenanceScheduleConstraintProvider implements ConstraintProvider
                 crewConflict(constraintFactory),
                 minStartDate(constraintFactory),
                 maxEndDate(constraintFactory),
+                doNotOverAssignEquipment(constraintFactory),
                 // Soft constraints
                 beforeIdealEndDate(constraintFactory),
                 afterIdealEndDate(constraintFactory),
@@ -114,6 +124,19 @@ public class MaintenanceScheduleConstraintProvider implements ConstraintProvider
                             return intersection.size() * overlap;
                         })
                 .asConstraint("Tag conflict");
+    }
+
+    // To verify by Lukáš
+    Constraint doNotOverAssignEquipment(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(Job.class)
+                .groupBy(Job::getEquipment, ConstraintCollectors.toConnectedTemporalRanges(
+                        job -> job.getStartDate().atStartOfDay(),
+                        job -> job.getEndDate().atStartOfDay())
+                )
+                .flattenLast(crc -> crc.getConnectedRanges())
+                .filter((equipment, connectedRange) -> connectedRange.getMaximumOverlap() > equipment.getCapacity())
+                .penalize(HardSoftLongScore.ONE_HARD,  (equipment, connectedRange) -> connectedRange.getMaximumOverlap())
+                .asConstraint("Concurrent equipment usage over capacity");
     }
 
 }

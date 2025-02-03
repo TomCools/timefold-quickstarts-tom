@@ -11,6 +11,7 @@ import java.util.Set;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import org.acme.maintenancescheduling.domain.Crew;
+import org.acme.maintenancescheduling.domain.Equipment;
 import org.acme.maintenancescheduling.domain.Job;
 import org.acme.maintenancescheduling.domain.MaintenanceSchedule;
 import org.acme.maintenancescheduling.domain.WorkCalendar;
@@ -50,6 +51,7 @@ public class DemoDataGenerator {
         final String[] jobTargetNames = { "Street", "Bridge", "Tunnel", "Highway", "Boulevard", "Avenue",
                 "Square", "Plaza" };
 
+        Equipment equipment = new Equipment("CHAINSAW", 1);
         List<Job> jobs = new ArrayList<>();
         int jobListSize = weekListSize * crews.size() * 3 / 5;
         int jobAreaTargetLimit = Math.min(jobTargetNames.length, crews.size() * 2);
@@ -69,8 +71,13 @@ public class DemoDataGenerator {
             Set<String> tags = random.nextDouble() < 0.1 ? Set.of(jobArea, "Subway") : Set.of(jobArea);
             jobs.add(new Job(Integer.toString(i), jobArea + " " + jobTarget, durationInDays, minStartDate, maxEndDate, idealEndDate,
                     tags));
+
+        }
+        for (Job job : jobs) {
+            job.setEquipment(equipment);
         }
         maintenanceSchedule.setJobs(jobs);
+
         return maintenanceSchedule;
     }
 
