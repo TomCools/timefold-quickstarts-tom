@@ -1,11 +1,16 @@
 
 package org.acme.conferencescheduling.domain;
 
+import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
+import ai.timefold.solver.core.api.domain.variable.ShadowVariable;
+import org.acme.conferencescheduling.solver.SpeakerTalksUpdatingVariableListener;
+
 import static java.util.Collections.emptySet;
 
 import java.util.Objects;
 import java.util.Set;
 
+@PlanningEntity
 public class Speaker {
 
     private String id;
@@ -21,6 +26,14 @@ public class Speaker {
     private Set<String> preferredRoomTags;
     private Set<String> prohibitedRoomTags;
     private Set<String> undesiredRoomTags;
+
+    @ShadowVariable(variableListenerClass = SpeakerTalksUpdatingVariableListener.class,
+            sourceEntityClass = Talk.class,
+            sourceVariableName = "timeslot")
+    @ShadowVariable(variableListenerClass = SpeakerTalksUpdatingVariableListener.class,
+            sourceEntityClass = Talk.class,
+            sourceVariableName = "speakers")
+    private Set<Timeslot> timeslots;
 
     public Speaker() {
     }
@@ -56,6 +69,15 @@ public class Speaker {
         this.preferredRoomTags = preferredRoomTags;
         this.prohibitedRoomTags = prohibitedRoomTags;
         this.undesiredRoomTags = undesiredRoomTags;
+        this.timeslots = emptySet();
+    }
+
+    public Set<Timeslot> getTimeslots() {
+        return timeslots;
+    }
+
+    public void setTimeslots(Set<Timeslot> timeslots) {
+        this.timeslots = timeslots;
     }
 
     public String getId() {

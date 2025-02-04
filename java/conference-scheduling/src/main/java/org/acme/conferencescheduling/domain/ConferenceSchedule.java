@@ -27,7 +27,7 @@ public class ConferenceSchedule {
     @ProblemFactCollectionProperty
     private Set<Room> rooms;
 
-    @ProblemFactCollectionProperty
+    @PlanningEntityCollectionProperty
     private Set<Speaker> speakers;
 
     @PlanningEntityCollectionProperty
