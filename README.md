@@ -42,8 +42,8 @@ Find the most efficient routes for vehicles to reach visits, considering vehicle
 
 ![Vehicle Routing Screenshot](java/vehicle-routing/vehicle-routing-screenshot.png)
 
-- [Run quarkus-vehicle-routing](java/vehicle-routing/README.adoc) (Java, Maven, Quarkus)
-- [Run python-vehicle-routing](python/vehicle-routing/README.adoc) (Python, FastAPI)
+- [Run quarkus-vehicle-routing](java/vehicle-routing/README.MD) (Java, Maven, Quarkus)
+- [Run python-vehicle-routing](python/vehicle-routing/README.MD) (Python, FastAPI)
 
 > [!TIP]
 >  <img src="https://docs.timefold.ai/_/img/models/field-service-routing.svg" align="right" width="50px" /> [Check out our off-the-shelf model for Field Service Routing](https://app.timefold.ai/models/field-service-routing/v1). This model goes beyond basic Vehicle Routing and supports additional constraints such as priorities, skills, fairness and more.
@@ -56,8 +56,8 @@ Schedule shifts to employees, accounting for employee availability and shift ski
 
 ![Employee Scheduling Screenshot](java/employee-scheduling/employee-scheduling-screenshot.png)
 
-- [Run quarkus-employee-scheduling](java/employee-scheduling/README.adoc) (Java, Maven, Quarkus)
-- [Run python-employee-scheduling](python/employee-scheduling/README.adoc) (Python, FastAPI)
+- [Run quarkus-employee-scheduling](java/employee-scheduling/README.MD) (Java, Maven, Quarkus)
+- [Run python-employee-scheduling](python/employee-scheduling/README.MD) (Python, FastAPI)
 
 > [!TIP]
 >  <img src="https://docs.timefold.ai/_/img/models/employee-shift-scheduling.svg" align="right" width="50px" /> [Check out our off-the-shelf model for Employee Shift Scheduling](https://app.timefold.ai/models/employee-scheduling/v1). This model supports many additional constraints such as skills, pairing employees, fairness and more.
