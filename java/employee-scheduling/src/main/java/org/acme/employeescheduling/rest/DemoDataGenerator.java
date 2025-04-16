@@ -18,6 +18,11 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import org.acme.employeescheduling.domain.Employee;
@@ -112,8 +117,28 @@ public class DemoDataGenerator {
 
     Map<String, List<LocalTime>> locationToShiftStartTimeListMap = new HashMap<>();
 
-    public EmployeeSchedule generateDemoData(DemoData demoData) {
-        return generateDemoData(demoData.getParameters());
+    public EmployeeSchedule generateDemoData(DemoData demoData, String customized) {
+        DemoDataParameters parameters = demoData.getParameters();
+        if(customized != null) {
+            String MODEL_NAME = "llama3.2"; // try other local ollama model names
+            String BASE_URL = "http://localhost:11434"; // local ollama base url
+            // update with langchain
+            ChatLanguageModel model = OllamaChatModel.builder()
+                    .baseUrl(BASE_URL)
+                    .modelName(MODEL_NAME)
+                    .build();
+
+            DemoContextBuilder contextBuilder = AiServices.create(DemoContextBuilder.class, model);
+            DemoDataCustomization context = contextBuilder.createContextForIndusty(parameters.requiredSkills.size(), parameters.optionalSkills.size(), parameters.locations.size(), customized);
+            parameters = new DemoDataParameters(context.locations, context.requiredSkills,context.optionalSkills, parameters.daysInSchedule, parameters.employeeCount, parameters.optionalSkillDistribution, parameters.shiftCountDistribution, parameters.availabilityCountDistribution, parameters.randomSeed);
+        }
+        return generateDemoData(parameters);
+    }
+
+    record DemoDataCustomization(List<String> locations, List<String> requiredSkills, List<String> optionalSkills) {};
+    interface DemoContextBuilder {
+        @UserMessage("Generate me {{locations}} relevant 1 word locations, {{requiredSkills}} 1 word relevant requiredSkills and {{optionalSkills}} 1 word relevant optionalSkills for {{customization}} industry in a JSON format please?")
+        DemoDataCustomization createContextForIndusty(@V("requiredSkills") int requiredSkills, @V("optionalSkills") int optionalSkills, @V("locations") int locations, @V("customization")String customization);
     }
 
     public EmployeeSchedule generateDemoData(DemoDataParameters parameters) {
