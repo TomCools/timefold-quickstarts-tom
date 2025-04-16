@@ -148,9 +148,14 @@ function refreshSchedule() {
         if (demoDataId === null) {
             alert("Please select a test data set.");
             return;
+        } else {
+            const value = $("#testDataCustomizer").val();
+            if(value) {
+                path = "/demo-data/" + demoDataId+"?customized="+value;
+            } else {
+                path = "/demo-data/" + demoDataId;
+            }
         }
-
-        path = "/demo-data/" + demoDataId;
     }
     $.getJSON(path, function (schedule) {
         loadedSchedule = schedule;
@@ -159,7 +164,7 @@ function refreshSchedule() {
         .fail(function (xhr, ajaxOptions, thrownError) {
             showError("Getting the schedule has failed.", xhr);
             refreshSolvingButtons(false);
-        });
+        })
 }
 
 function renderSchedule(schedule) {
@@ -469,9 +474,10 @@ function replaceQuickstartTimefoldAutoHeaderFooter() {
                   <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       Data
                   </button>
-                  <div id="testDataButton" class="dropdown-menu" aria-labelledby="dropdownMenuButton"></div>
-              </div>
+                  <div id="testDataButton" class="dropdown-menu" aria-labelledby="dropdownMenuButton"></div>              </div>
           </div>
+          <input id="testDataCustomizer"></input>
+
         </nav>
       </div>`));
     }

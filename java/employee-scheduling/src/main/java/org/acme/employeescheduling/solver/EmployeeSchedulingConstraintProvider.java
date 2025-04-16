@@ -36,10 +36,10 @@ public class EmployeeSchedulingConstraintProvider implements ConstraintProvider 
     public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
         return new Constraint[] {
                 // Hard constraints
+                oneShiftPerDay(constraintFactory),
                 requiredSkill(constraintFactory),
                 noOverlappingShifts(constraintFactory),
                 atLeast10HoursBetweenTwoShifts(constraintFactory),
-                oneShiftPerDay(constraintFactory),
                 unavailableEmployee(constraintFactory),
                 // Soft constraints
                 undesiredDayForEmployee(constraintFactory),
