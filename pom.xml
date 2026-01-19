@@ -25,6 +25,7 @@
     <module>java/facility-location</module>
     <module>java/maintenance-scheduling</module>
     <module>java/vehicle-routing</module>
+    <module>java/vehicle-routing-intermediate-facilities</module>
     <module>java/order-picking</module>
     <module>java/employee-scheduling</module>
     <module>java/food-packaging</module>
