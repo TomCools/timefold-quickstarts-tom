@@ -46,7 +46,7 @@ public class VehicleRouteDemoResource {
 
     public enum DemoData {
         PHILADELPHIA(0, 55, 6, 3, LocalTime.of(7, 30),
-                1, 2, 15, 30,
+                5, 10, 15, 30,
                 new Location(39.7656099067391, -76.83782328143754),
                 new Location(40.77636644354855, -74.9300739430771)),
         HARTFORT(1, 50, 6, 3, LocalTime.of(7, 30),

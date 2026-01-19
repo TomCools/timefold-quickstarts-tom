@@ -2,6 +2,7 @@ package org.acme.vehiclerouting.solver;
 
 import ai.timefold.solver.core.api.score.buildin.hardmediumsoftlong.HardMediumSoftLongScore;
 import ai.timefold.solver.core.api.score.stream.Constraint;
+import ai.timefold.solver.core.api.score.stream.ConstraintCollectors;
 import ai.timefold.solver.core.api.score.stream.ConstraintFactory;
 import ai.timefold.solver.core.api.score.stream.ConstraintProvider;
 
@@ -66,9 +67,17 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
     // ************************************************************************
 
     protected Constraint minimizeTravelTime(ConstraintFactory factory) {
-        return factory.forEach(Vehicle.class)
-                .penalizeLong(HardMediumSoftLongScore.ONE_SOFT,
-                        Vehicle::getTotalDrivingTimeSeconds)
+        return factory.forEachIncludingUnassigned(Visit.class)
+                .filter(visit -> visit.getVehicle() != null)
+                .groupBy(Visit::getVehicle, ConstraintCollectors.sumLong(Visit::getDrivingTimeSecondsFromPreviousNonFacilityStandstill))
+                .penalizeLong(HardMediumSoftLongScore.ONE_SOFT, (vehicle, totalDrivingTime) -> {
+                    if (vehicle.getVisits().isEmpty()) {
+                        return totalDrivingTime;
+                    }
+                    Visit lastVisit = vehicle.getVisits().get(vehicle.getVisits().size() - 1);
+                    long returnHomeTime = lastVisit.getLocation().getDrivingTimeTo(vehicle.getHomeLocation());
+                    return totalDrivingTime + returnHomeTime;
+                })
                 .asConstraint(MINIMIZE_TRAVEL_TIME);
     }
 }

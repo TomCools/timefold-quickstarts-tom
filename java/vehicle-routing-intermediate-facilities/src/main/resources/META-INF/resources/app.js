@@ -214,8 +214,33 @@ function renderRoutes(solution) {
         <td>${formatDrivingTime(totalDrivingTimeSeconds)}</td>
       </tr>`);
     });
-    // Visits
-    solution.visits.forEach(function (visit) {
+    // Collect all visits (handle both old format with solution.visits and new format with visits in vehicles)
+    const allVisits = new Map();
+
+    // First, add visits from solution.visits if they exist
+    if (solution.visits) {
+        solution.visits.forEach(visit => {
+            if (visit && visit.id && visit.location) {
+                allVisits.set(visit.id, visit);
+            }
+        });
+    }
+
+    // Then, collect visits from vehicles (these are the actual visit objects with full data)
+    solution.vehicles.forEach(function (vehicle) {
+        if (vehicle.visits) {
+            vehicle.visits.forEach(visitOrId => {
+                let visit;
+                if (typeof visitOrId === 'object' && visitOrId.location) {
+                    visit = visitOrId;
+                    allVisits.set(visit.id, visit);
+                }
+            });
+        }
+    });
+
+    // Render all visit markers
+    allVisits.forEach(function (visit) {
         const marker = getVisitMarker(visit);
         if (!marker) {
             console.error('Failed to create marker for visit:', visit);
@@ -225,10 +250,21 @@ function renderRoutes(solution) {
         if (visit.vehicle != null) {
             const vehicle = solution.vehicles.find(v => v.id === visit.vehicle);
             if (vehicle) {
-                marker.setStyle({color: colorByVehicle(vehicle).bg, fillOpacity: 0.8});
+                const vehicleColor = colorByVehicle(vehicle).bg;
+                marker.setStyle({
+                    color: vehicleColor,
+                    fillColor: vehicleColor,
+                    fillOpacity: 0.8,
+                    weight: 2
+                });
             }
         } else {
-            marker.setStyle({color: '#999999', fillOpacity: 0.5});
+            marker.setStyle({
+                color: '#999999',
+                fillColor: '#999999',
+                fillOpacity: 0.5,
+                weight: 2
+            });
         }
     });
     // Facilities
@@ -240,7 +276,17 @@ function renderRoutes(solution) {
     }
     // Route
     routeGroup.clearLayers();
-    const visitByIdMap = new Map(solution.visits.map(visit => [visit.id, visit]));
+
+    // Build visitByIdMap from actual visit objects (prioritize visits from vehicles)
+    const visitByIdMap = new Map();
+    if (solution.visits) {
+        solution.visits.forEach(visit => {
+            if (visit && visit.id) {
+                visitByIdMap.set(visit.id, visit);
+            }
+        });
+    }
+
     for (let vehicle of solution.vehicles) {
         const homeLocation = vehicle.homeLocation;
         const routeLocations = [homeLocation];
@@ -281,7 +327,8 @@ function renderRoutes(solution) {
 
     // Summary
     $('#score').text(solution.score);
-    $("#info").text(`This dataset has ${solution.visits.length} visits who need to be assigned to ${solution.vehicles.length} vehicles.`);
+    const visitCount = allVisits.size || (solution.visits ? solution.visits.length : 0);
+    $("#info").text(`This dataset has ${visitCount} visits who need to be assigned to ${solution.vehicles.length} vehicles.`);
     $('#drivingTime').text(formatDrivingTime(solution.totalDrivingTimeSeconds));
 }
 
@@ -291,11 +338,32 @@ function renderTimelines(routePlan) {
     byVehicleItemData.clear();
     byVisitItemData.clear();
 
+    // Collect all visits from both routePlan.visits and vehicles
+    const allVisitsMap = new Map();
+    if (routePlan.visits) {
+        routePlan.visits.forEach(visit => {
+            if (visit && visit.id) {
+                allVisitsMap.set(visit.id, visit);
+            }
+        });
+    }
+
+    // Collect visits from vehicles (these override if they have more complete data)
+    routePlan.vehicles.forEach(function (vehicle) {
+        if (vehicle.visits) {
+            vehicle.visits.forEach(visitOrId => {
+                if (typeof visitOrId === 'object' && visitOrId.id) {
+                    allVisitsMap.set(visitOrId.id, visitOrId);
+                }
+            });
+        }
+    });
+
     $.each(routePlan.vehicles, function (index, vehicle) {
         const {totalDemand, capacity} = vehicle
         const percentage = totalDemand / capacity * 100;
         const vehicleWithLoad = `<h5 class="card-title mb-1">vehicle-${vehicle.id}</h5>
-                                 <div class="progress" data-bs-toggle="tooltip-load" data-bs-placement="left" 
+                                 <div class="progress" data-bs-toggle="tooltip-load" data-bs-placement="left"
                                       data-html="true" title="Cargo: ${totalDemand} / Capacity: ${capacity}">
                                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%">
                                       ${totalDemand}/${capacity}
@@ -304,7 +372,7 @@ function renderTimelines(routePlan) {
         byVehicleGroupData.add({id: vehicle.id, content: vehicleWithLoad});
     });
 
-    $.each(routePlan.visits, function (index, visit) {
+    $.each(Array.from(allVisitsMap.values()), function (index, visit) {
         const minStartTime = JSJoda.LocalDateTime.parse(visit.minStartTime);
         const maxEndTime = JSJoda.LocalDateTime.parse(visit.maxEndTime);
         const serviceDuration = JSJoda.Duration.ofSeconds(visit.serviceDuration);
@@ -374,7 +442,7 @@ function renderTimelines(routePlan) {
                     id: visit.id + '_wait',
                     group: visit.vehicle, // visit.vehicle is the vehicle.id due to Jackson serialization
                     subgroup: visit.vehicle,
-                    content: byVehicleWaitElement.ahtml(),
+                    content: byVehicleWaitElement.html(),
                     start: visit.arrivalTime,
                     end: visit.minStartTime
                 });
@@ -404,16 +472,16 @@ function renderTimelines(routePlan) {
     });
 
     $.each(routePlan.vehicles, function (index, vehicle) {
-        if (vehicle.visits.length > 0) {
+        if (vehicle.visits && vehicle.visits.length > 0) {
             // Handle both visit objects and visit IDs
             const lastVisitOrId = vehicle.visits[vehicle.visits.length - 1];
             let lastVisit;
             if (typeof lastVisitOrId === 'object') {
                 lastVisit = lastVisitOrId;
             } else {
-                lastVisit = routePlan.visits.filter((visit) => visit.id === lastVisitOrId).pop();
+                lastVisit = allVisitsMap.get(lastVisitOrId);
             }
-            if (lastVisit) {
+            if (lastVisit && lastVisit.departureTime && vehicle.arrivalTime) {
                 byVehicleItemData.add({
                     id: vehicle.id + '_travelBackToHomeLocation',
                     group: vehicle.id, // visit.vehicle is the vehicle.id due to Jackson serialization
