@@ -5,6 +5,7 @@ import ai.timefold.solver.core.api.score.stream.Constraint;
 import ai.timefold.solver.core.api.score.stream.ConstraintCollectors;
 import ai.timefold.solver.core.api.score.stream.ConstraintFactory;
 import ai.timefold.solver.core.api.score.stream.ConstraintProvider;
+import ai.timefold.solver.core.api.score.stream.Joiners;
 
 import org.acme.vehiclerouting.domain.Visit;
 import org.acme.vehiclerouting.domain.Vehicle;
@@ -21,7 +22,7 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
         return new Constraint[] {
                 // Hard
                 vehicleCapacity(factory),
-                //serviceFinishedAfterMaxEndTime(factory),
+                serviceFinishedAfterMaxEndTime(factory),
 
                 // Medium
                 maximizeVisitsAssigned(factory),
@@ -36,10 +37,11 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
     // ************************************************************************
 
     protected Constraint vehicleCapacity(ConstraintFactory factory) {
-        return factory.forEach(Vehicle.class)
-                .filter(vehicle -> vehicle.getTotalDemand() > vehicle.getCapacity())
+        return factory.forEachIncludingUnassigned(Visit.class)
+                .filter(visit -> visit.getVehicle() != null
+                        && visit.getTotalUsedCapacity() > visit.getVehicle().getCapacity())
                 .penalizeLong(HardMediumSoftLongScore.ONE_HARD,
-                        vehicle -> vehicle.getTotalDemand() - vehicle.getCapacity())
+                        visit -> visit.getTotalUsedCapacity() - visit.getVehicle().getCapacity())
                 .asConstraint(VEHICLE_CAPACITY);
     }
 

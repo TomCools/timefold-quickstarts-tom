@@ -128,6 +128,14 @@ public class Visit implements LocationAware {
         return facilityStopBefore;
     }
 
+    public int getTotalUsedCapacity() {
+        return totalUsedCapacity;
+    }
+
+    public void setTotalUsedCapacity(int totalUsedCapacity) {
+        this.totalUsedCapacity = totalUsedCapacity;
+    }
+
     // ************************************************************************
     // Complex methods
     // ************************************************************************
@@ -140,11 +148,11 @@ public class Visit implements LocationAware {
         }
 
         if(facilityStopBefore != null) {
-            return 0; // We always fully onload when facility is visited.
+            return demand; // We reload at facility, then service this visit, so capacity = this visit's demand
         }
 
         if(previousVisit == null) {
-            return 0; // no capacity is used yet
+            return demand; // First visit from home, capacity = this visit's demand
         }
 
         return previousVisit.totalUsedCapacity + demand;
@@ -209,7 +217,7 @@ public class Visit implements LocationAware {
         Location intermediateStop = previousVisit == null ? vehicle.getLocation() : previousVisit.getLocation();
         if(facilityStopBefore != null) {
             return intermediateStop.getDrivingTimeTo(facilityStopBefore.location())
-                    + 20 // service
+                    + 900 // 15 min service
                     + facilityStopBefore.location().getDrivingTimeTo(this.location);
         } else {
             return intermediateStop.getDrivingTimeTo(this.location);

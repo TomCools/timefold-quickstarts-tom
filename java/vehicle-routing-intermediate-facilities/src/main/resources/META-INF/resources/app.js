@@ -120,10 +120,16 @@ Home Location`;
 
 function visitPopupContent(visit) {
     const arrival = visit.arrivalTime ? `<h6>Arrival at ${showTimeOnly(visit.arrivalTime)}.</h6>` : '';
+    const facilityStop = visit.facilityStopBefore ? `<h6>Facility stop: ${visit.facilityStopBefore.name}</h6>` : '';
+    const capacity = visit.totalUsedCapacity !== undefined && visit.totalUsedCapacity !== null
+        ? `<h6>Total used capacity: ${visit.totalUsedCapacity}</h6>`
+        : '';
     return `<h5>${visit.name}</h5>
     <h6>Demand: ${visit.demand}</h6>
+    ${capacity}
     <h6>Available from ${showTimeOnly(visit.minStartTime)} to ${showTimeOnly(visit.maxEndTime)}.</h6>
-    ${arrival}`;
+    ${arrival}
+    ${facilityStop}`;
 }
 
 function showTimeOnly(localDateTimeString) {
@@ -194,8 +200,25 @@ function renderRoutes(solution) {
     vehiclesTable.children().remove();
     solution.vehicles.forEach(function (vehicle) {
         getHomeLocationMarker(vehicle).setPopupContent(homeLocationPopupContent(vehicle));
-        const {id, capacity, totalDemand, totalDrivingTimeSeconds} = vehicle;
-        const percentage = totalDemand / capacity * 100;
+        const {id, totalDrivingTimeSeconds} = vehicle;
+
+        // Count facility stops
+        let facilityStops = 0;
+        if (vehicle.visits) {
+            vehicle.visits.forEach(visitOrId => {
+                let visit;
+                if (typeof visitOrId === 'object') {
+                    visit = visitOrId;
+                } else {
+                    // Skip ID-based visits for now, we'll handle them later if needed
+                    return;
+                }
+                if (visit && visit.facilityStopBefore) {
+                    facilityStops++;
+                }
+            });
+        }
+
         const color = colorByVehicle(vehicle);
         vehiclesTable.append(`
       <tr>
@@ -206,10 +229,7 @@ function renderRoutes(solution) {
         </td>
         <td>Vehicle ${id}</td>
         <td>
-          <div class="progress" data-bs-toggle="tooltip-load" data-bs-placement="left" data-html="true"
-            title="Cargo: ${totalDemand} / Capacity: ${capacity}">
-            <div class="progress-bar" role="progressbar" style="width: ${percentage}%">${totalDemand}/${capacity}</div>
-          </div>
+          <i class="fas fa-warehouse" style="color: #FF6B35;"></i> ${facilityStops} facility stop${facilityStops !== 1 ? 's' : ''}
         </td>
         <td>${formatDrivingTime(totalDrivingTimeSeconds)}</td>
       </tr>`);
@@ -289,7 +309,8 @@ function renderRoutes(solution) {
 
     for (let vehicle of solution.vehicles) {
         const homeLocation = vehicle.homeLocation;
-        const routeLocations = [homeLocation];
+        let previousLocation = homeLocation;
+        const vehicleColor = colorByVehicle(vehicle).bg;
 
         // Handle both visit objects and visit IDs
         vehicle.visits.forEach(visitOrId => {
@@ -312,17 +333,52 @@ function renderRoutes(solution) {
 
             // Add facility stop if needed
             if (visit.facilityStopBefore && visit.facilityStopBefore.location) {
-                routeLocations.push(visit.facilityStopBefore.location);
-            }
+                // Draw line from previous location to facility
+                L.polyline([previousLocation, visit.facilityStopBefore.location], {
+                    color: vehicleColor,
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: '5, 5'  // Dashed line to facility
+                }).addTo(routeGroup);
 
-            // Add the visit location
-            routeLocations.push(visit.location);
+                // Add a small marker at the facility stop
+                L.circleMarker(visit.facilityStopBefore.location, {
+                    radius: 5,
+                    color: vehicleColor,
+                    fillColor: '#FF6B35',
+                    fillOpacity: 0.8,
+                    weight: 2
+                }).addTo(routeGroup)
+                  .bindPopup(`<b>Facility Stop: ${visit.facilityStopBefore.name}</b><br>Reload for visit: ${visit.name}`);
+
+                // Draw line from facility to visit
+                L.polyline([visit.facilityStopBefore.location, visit.location], {
+                    color: vehicleColor,
+                    weight: 3,
+                    opacity: 0.7
+                }).addTo(routeGroup);
+
+                previousLocation = visit.location;
+            } else {
+                // Direct route from previous location to visit
+                L.polyline([previousLocation, visit.location], {
+                    color: vehicleColor,
+                    weight: 3,
+                    opacity: 0.7
+                }).addTo(routeGroup);
+
+                previousLocation = visit.location;
+            }
         });
 
         // Return to home
-        routeLocations.push(homeLocation);
-
-        L.polyline(routeLocations, {color: colorByVehicle(vehicle).bg}).addTo(routeGroup);
+        if (vehicle.visits.length > 0) {
+            L.polyline([previousLocation, homeLocation], {
+                color: vehicleColor,
+                weight: 3,
+                opacity: 0.7
+            }).addTo(routeGroup);
+        }
     }
 
     // Summary
@@ -360,16 +416,27 @@ function renderTimelines(routePlan) {
     });
 
     $.each(routePlan.vehicles, function (index, vehicle) {
-        const {totalDemand, capacity} = vehicle
-        const percentage = totalDemand / capacity * 100;
-        const vehicleWithLoad = `<h5 class="card-title mb-1">vehicle-${vehicle.id}</h5>
-                                 <div class="progress" data-bs-toggle="tooltip-load" data-bs-placement="left"
-                                      data-html="true" title="Cargo: ${totalDemand} / Capacity: ${capacity}">
-                                   <div class="progress-bar" role="progressbar" style="width: ${percentage}%">
-                                      ${totalDemand}/${capacity}
-                                   </div>
-                                 </div>`
-        byVehicleGroupData.add({id: vehicle.id, content: vehicleWithLoad});
+        // Count facility stops
+        let facilityStops = 0;
+        if (vehicle.visits) {
+            vehicle.visits.forEach(visitOrId => {
+                let visit;
+                if (typeof visitOrId === 'object') {
+                    visit = visitOrId;
+                } else {
+                    visit = allVisitsMap.get(visitOrId);
+                }
+                if (visit && visit.facilityStopBefore) {
+                    facilityStops++;
+                }
+            });
+        }
+
+        const vehicleInfo = `<h5 class="card-title mb-1">vehicle-${vehicle.id}</h5>
+                             <div class="text-muted">
+                               <i class="fas fa-warehouse" style="color: #FF6B35;"></i> ${facilityStops} facility stop${facilityStops !== 1 ? 's' : ''}
+                             </div>`
+        byVehicleGroupData.add({id: vehicle.id, content: vehicleInfo});
     });
 
     $.each(Array.from(allVisitsMap.values()), function (index, visit) {
