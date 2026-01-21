@@ -23,6 +23,7 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                 // Hard
                 vehicleCapacity(factory),
                 serviceFinishedAfterMaxEndTime(factory),
+                noFacilityForFirstVisit(factory),
 
                 // Medium
                 maximizeVisitsAssigned(factory),
@@ -30,6 +31,13 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                 // Soft
                 minimizeTravelTime(factory)
         };
+    }
+
+    private Constraint noFacilityForFirstVisit(ConstraintFactory factory) {
+        return factory.forEachIncludingUnassigned(Visit.class)
+                .filter(visit -> visit.getPreviousVisit() == null && visit.getFacilityStopBefore() != null)
+                .penalizeLong(HardMediumSoftLongScore.ONE_HARD)
+                .asConstraint("SHOULD_NOT_VISIT");
     }
 
     // ************************************************************************
