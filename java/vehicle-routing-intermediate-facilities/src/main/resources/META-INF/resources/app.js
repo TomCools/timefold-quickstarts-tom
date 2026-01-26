@@ -229,7 +229,7 @@ function renderRoutes(solution) {
         </td>
         <td>Vehicle ${id}</td>
         <td>
-          <i class="fas fa-warehouse" style="color: #FF6B35;"></i> ${facilityStops} facility stop${facilityStops !== 1 ? 's' : ''}
+          <i class="fas fa-warehouse" style="color: #FF6B35;"></i> ${facilityStops} stop${facilityStops !== 1 ? 's' : ''}
         </td>
         <td>${formatDrivingTime(totalDrivingTimeSeconds)}</td>
       </tr>`);

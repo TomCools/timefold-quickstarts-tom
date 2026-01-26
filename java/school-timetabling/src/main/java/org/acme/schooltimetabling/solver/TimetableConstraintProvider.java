@@ -1,6 +1,7 @@
 package org.acme.schooltimetabling.solver;
 
 import java.time.Duration;
+import java.time.LocalTime;
 
 import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
 import ai.timefold.solver.core.api.score.stream.Constraint;
@@ -14,7 +15,7 @@ public class TimetableConstraintProvider implements ConstraintProvider {
 
     @Override
     public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
-        return new Constraint[] {
+        return new Constraint[]{
                 // Hard constraints
                 roomConflict(constraintFactory),
                 teacherConflict(constraintFactory),
@@ -22,7 +23,8 @@ public class TimetableConstraintProvider implements ConstraintProvider {
                 // Soft constraints
                 teacherRoomStability(constraintFactory),
                 teacherTimeEfficiency(constraintFactory),
-                studentGroupSubjectVariety(constraintFactory)
+                studentGroupSubjectVariety(constraintFactory),
+                marieCurieNoAfternoon(constraintFactory),
         };
     }
 
@@ -81,7 +83,7 @@ public class TimetableConstraintProvider implements ConstraintProvider {
                             lesson2.getTimeslot().getStartTime());
                     return !between.isNegative() && between.compareTo(Duration.ofMinutes(30)) <= 0;
                 })
-                .reward(HardSoftScore.ONE_SOFT)
+                .reward(HardSoftScore.ofSoft(10))
                 .asConstraint("Teacher time efficiency");
     }
 
@@ -102,4 +104,12 @@ public class TimetableConstraintProvider implements ConstraintProvider {
                 .asConstraint("Student group subject variety");
     }
 
+    Constraint marieCurieNoAfternoon(ConstraintFactory constraintFactory) {
+        return constraintFactory
+                .forEach(Lesson.class)
+                .filter(lesson -> lesson.getTeacher().equals("M. Curie")
+                        && lesson.getTimeslot().getStartTime().isAfter(LocalTime.NOON))
+                .penalize(HardSoftScore.ofSoft(1000))
+                .asConstraint("Marie Curie don't work no afternoon.");
+    }
 }

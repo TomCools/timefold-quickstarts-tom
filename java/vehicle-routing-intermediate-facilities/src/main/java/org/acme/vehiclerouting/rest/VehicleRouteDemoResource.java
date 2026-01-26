@@ -38,6 +38,7 @@ public class VehicleRouteDemoResource {
 
     private static final String[] FIRST_NAMES = { "Amy", "Beth", "Carl", "Dan", "Elsa", "Flo", "Gus", "Hugo", "Ivy", "Jay" };
     private static final String[] LAST_NAMES = { "Cole", "Fox", "Green", "Jones", "King", "Li", "Poe", "Rye", "Smith", "Watt" };
+    private static final String[] FACILITY_NAMES = { "Distribution Center", "Logistics Hub", "Warehouse", "Depot", "Transfer Station" };
     private static final int[] SERVICE_DURATION_MINUTES = { 10, 20, 30, 40 };
     private static final LocalTime MORNING_WINDOW_START = LocalTime.of(8, 0);
     private static final LocalTime MORNING_WINDOW_END = LocalTime.of(12, 0);
@@ -207,9 +208,15 @@ public class VehicleRouteDemoResource {
                 .limit(demoData.visitCount)
                 .collect(Collectors.toList());
 
+        AtomicLong facilitySequence = new AtomicLong();
         Supplier<Facilitiy> facilityProvider = () -> {
+            int index = (int) facilitySequence.getAndIncrement();
+            String facilityName = FACILITY_NAMES[index % FACILITY_NAMES.length];
+            if (index >= FACILITY_NAMES.length) {
+                facilityName = facilityName + " " + ((index / FACILITY_NAMES.length) + 1);
+            }
             return new Facilitiy(
-                    nameSupplier.get(),
+                    facilityName,
                     new Location(latitudes.nextDouble(), longitudes.nextDouble()));
         };
 
